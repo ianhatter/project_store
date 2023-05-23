@@ -2,18 +2,24 @@ version: "3.8"
 services:
   web:
     build: ./app
-    command: python manage.py runserver 0.0.0.0:8000
+    image: 838434738252.dkr.ecr.us-east-2.amazonaws.com/portfolio_project:portfolio_project
+    command: gunicorn nc_tutorials.wsgi:application --bind 0.0.0.0:8000
     volumes:
       - ./app/:/usr/src/app/
+      - static_volume:/usr/src/app/static
     ports:
       - 8000:8000
+    expose:
+      - 8000
     environment:
       - DB_NAME=nc_store_db
       - DB_USER=postgres
       - DB_PASSWORD=admin123
-      - DB_HOST=pg
+      - DB_HOST=nctutorials.cwr0hdrxgvrm.us-east-2.rds.amazonaws.com
       - DB_PORT=5432
       - DATABASE=postgres
+      - VIRTUAL_HOST=ec2-3-141-80-109.us-east-2.compute.amazonaws.com
+      - VIRTUAL_PORT=8000
     depends_on:
       - pg
   pg:
@@ -26,7 +32,7 @@ services:
       POSTGRES_DB: nc_store_db
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "5432:5432"
+      - 8000:80
     volumes:
       - ./data:/data
       - ./data/misc/django_init.sql:/docker-entrypoint-initdb.d/1-django-init.sql
@@ -41,6 +47,17 @@ services:
       PGADMIN_CONFIG_SERVER_MODE: "False"
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
-      - "5433:5433"
+      - 8000:80
     depends_on:
       - pg
+  nginx:
+    build: ./nginx
+    image: 838434738252.dkr.ecr.us-east-2.amazonaws.com/portfolio_project:portfolio_project
+    volumes:
+      - static_volume:/usr/src/app/static
+    ports:
+      - 8000:80
+    depends_on:
+      - web
+volumes:
+  static_volume:
